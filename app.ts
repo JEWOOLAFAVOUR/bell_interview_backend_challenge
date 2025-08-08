@@ -8,16 +8,22 @@ import helmet from "helmet";
 import authRouter from "./routers/auth-route/userRoute";
 import propertyRouter from "./routers/property-route/propertyRoute";
 import bookingRouter from "./routers/booking-route/bookingRoute";
-import "./db"; // This will connect to PostgreSQL
+
+// Only initialize database if not in test environment
+if (process.env.NODE_ENV !== "test") {
+  require("./db");
+}
 
 dotenv.config();
 
 // Check required environment variables
-const requiredEnvVars = ["JWT_SECRET", "NODE_ENV"];
+const requiredEnvVars = ["JWT_SECRET"];
 requiredEnvVars.forEach((envVar) => {
   if (!process.env[envVar]) {
     console.error(`⚠️ Required environment variable ${envVar} is not set!`);
-    process.exit(1);
+    if (process.env.NODE_ENV !== "test") {
+      process.exit(1);
+    }
   }
 });
 
@@ -46,8 +52,12 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
-app.use(morgan("combined")); // Simple logging
-app.use(generalLimiter);
+
+// Only use morgan and rate limiting if not in test
+if (process.env.NODE_ENV !== "test") {
+  app.use(morgan("combined"));
+  app.use(generalLimiter);
+}
 
 // Health check endpoint
 app.get("/health", (req: Request, res: Response) => {
@@ -112,35 +122,25 @@ app.use(function (
   });
 });
 
-// Start server
-const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-  console.log(
-    `🚀 Server running in ${
-      process.env.NODE_ENV || "development"
-    } mode on port ${PORT}`
-  );
-});
-
-// Graceful shutdown
-process.on("SIGTERM", () => {
-  console.log("SIGTERM received, shutting down gracefully");
-  server.close(() => {
-    console.log("Server closed");
-    process.exit(0);
+// Only start server if not in test environment
+if (process.env.NODE_ENV !== "test") {
+  const PORT = process.env.PORT || 5000;
+  const server = app.listen(PORT, () => {
+    console.log(
+      `🚀 Server running in ${
+        process.env.NODE_ENV || "development"
+      } mode on port ${PORT}`
+    );
   });
-});
 
-// Handle uncaught exceptions
-process.on("uncaughtException", (err) => {
-  console.error(`Uncaught Exception: ${err.message}`);
-  process.exit(1);
-});
-
-// Handle unhandled promise rejections
-process.on("unhandledRejection", (reason, promise) => {
-  console.error(`Unhandled Rejection:`, reason);
-  process.exit(1);
-});
+  // Graceful shutdown
+  process.on("SIGTERM", () => {
+    console.log("SIGTERM received, shutting down gracefully");
+    server.close(() => {
+      console.log("Server closed");
+      process.exit(0);
+    });
+  });
+}
 
 export default app;

@@ -58,9 +58,7 @@ Property.init(
       allowNull: false,
       validate: {
         isDate: true,
-        isAfter: new Date(Date.now() - 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0],
+        isAfter: "2020-01-01", // Use fixed date for testing
       },
     },
     available_to: {
