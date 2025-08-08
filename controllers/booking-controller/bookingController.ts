@@ -5,7 +5,6 @@ import { User } from "../../models/user/user";
 import { sendError } from "../../utils/helper";
 import { CustomRequest } from "../../utils/types";
 import { Op } from "sequelize";
-
 // POST /bookings - Create a new booking (immediately confirmed)
 const createBooking = async (
   req: CustomRequest,
@@ -68,14 +67,59 @@ const createBooking = async (
           },
         ],
       },
+      order: [["start_date", "ASC"]],
     });
 
     if (overlappingBookings.length > 0) {
-      return sendError(
-        res,
-        400,
-        "Selected dates overlap with existing confirmed bookings"
-      );
+      // Calculate available date ranges
+      // 1. Get all confirmed bookings for this property, sorted
+      const confirmedBookings = await Booking.findAll({
+        where: {
+          property_id,
+          status: "confirmed",
+        },
+        order: [["start_date", "ASC"]],
+      });
+
+      // 2. Build available ranges between property.available_from and property.available_to
+      const availableRanges: { start: Date; end: Date }[] = [];
+      let lastEnd = new Date(propertyStartDate);
+
+      for (const booking of confirmedBookings) {
+        const bookingStart = new Date(booking.start_date);
+        const bookingEnd = new Date(booking.end_date);
+
+        if (lastEnd < bookingStart) {
+          availableRanges.push({
+            start: new Date(lastEnd),
+            end: new Date(bookingStart),
+          });
+        }
+        lastEnd = bookingEnd > lastEnd ? bookingEnd : lastEnd;
+      }
+
+      // Add last available range if any
+      if (lastEnd < propertyEndDate) {
+        availableRanges.push({
+          start: new Date(lastEnd),
+          end: new Date(propertyEndDate),
+        });
+      }
+
+      // Format available ranges for response
+      const formattedRanges = availableRanges
+        .filter((r) => r.end > r.start)
+        .map((r) => ({
+          available_from: r.start.toISOString().split("T")[0],
+          available_to: r.end.toISOString().split("T")[0],
+        }));
+
+      res.status(400).json({
+        success: false,
+        message: "Selected dates overlap with existing confirmed bookings",
+        available_dates: formattedRanges,
+        error: null,
+      });
     }
 
     // Calculate total price
