@@ -21,6 +21,12 @@ router.get(
   propertyController.getAllProperties
 );
 router.get(
+  "/available",
+  validatePropertyQuery,
+  validate,
+  propertyController.getAvailableProperties
+); // New route
+router.get(
   "/:id",
   validateParamId,
   validate,

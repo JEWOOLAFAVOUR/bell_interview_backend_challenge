@@ -21,7 +21,7 @@ class Booking
   public start_date!: Date;
   public end_date!: Date;
   public total_price?: number;
-  public status!: "pending" | "confirmed" | "cancelled";
+  public status!: "confirmed" | "cancelled"; // Removed 'pending'
   public created_at!: Date;
   public readonly updatedAt!: Date;
 }
@@ -69,7 +69,7 @@ Booking.init(
         isDate: true,
         isAfter: new Date(Date.now() - 24 * 60 * 60 * 1000)
           .toISOString()
-          .split("T")[0], // Can't book in the past
+          .split("T")[0],
       },
     },
     end_date: {
@@ -80,12 +80,10 @@ Booking.init(
         isAfterStartDate(value: string) {
           if (
             this.start_date &&
-            new Date(value) <=
-              new Date(
-                this.start_date instanceof Date
-                  ? this.start_date
-                  : String(this.start_date)
-              )
+            (typeof this.start_date === "string" ||
+              typeof this.start_date === "number" ||
+              this.start_date instanceof Date) &&
+            new Date(value) <= new Date(this.start_date)
           ) {
             throw new Error("End date must be after start date");
           }
@@ -101,9 +99,9 @@ Booking.init(
       },
     },
     status: {
-      type: DataTypes.ENUM("pending", "confirmed", "cancelled"),
+      type: DataTypes.ENUM("confirmed", "cancelled"), // Removed 'pending'
       allowNull: false,
-      defaultValue: "pending",
+      defaultValue: "confirmed", // Default to confirmed
     },
     created_at: {
       type: DataTypes.DATE,
@@ -131,7 +129,6 @@ Booking.init(
         fields: ["status"],
       },
       {
-        // Composite index for checking overlapping bookings
         fields: ["property_id", "start_date", "end_date"],
       },
     ],

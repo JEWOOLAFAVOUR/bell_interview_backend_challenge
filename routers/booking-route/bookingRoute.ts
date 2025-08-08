@@ -20,6 +20,13 @@ router.post(
   validate,
   bookingController.createBooking
 );
+router.post(
+  "/:id/cancel",
+  verifyToken,
+  validateParamId,
+  validate,
+  bookingController.cancelBooking
+); // New route
 router.get("/my", verifyToken, bookingController.getMyBookings);
 router.get(
   "/:id",

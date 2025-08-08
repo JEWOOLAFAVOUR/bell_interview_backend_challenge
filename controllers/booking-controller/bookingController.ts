@@ -6,7 +6,7 @@ import { sendError } from "../../utils/helper";
 import { CustomRequest } from "../../utils/types";
 import { Op } from "sequelize";
 
-// POST /bookings - Create a new booking
+// POST /bookings - Create a new booking (immediately confirmed)
 const createBooking = async (
   req: CustomRequest,
   res: Response
@@ -48,11 +48,11 @@ const createBooking = async (
       );
     }
 
-    // Check for overlapping bookings
+    // Check for overlapping CONFIRMED bookings only (cancelled bookings don't block)
     const overlappingBookings = await Booking.findAll({
       where: {
         property_id,
-        status: { [Op.in]: ["confirmed", "pending"] },
+        status: "confirmed", // Only confirmed bookings block availability
         [Op.or]: [
           {
             start_date: { [Op.between]: [start_date, end_date] },
@@ -74,7 +74,7 @@ const createBooking = async (
       return sendError(
         res,
         400,
-        "Selected dates overlap with existing bookings"
+        "Selected dates overlap with existing confirmed bookings"
       );
     }
 
@@ -85,7 +85,7 @@ const createBooking = async (
     );
     const totalPrice = nights * parseFloat(property.price_per_night.toString());
 
-    // Create booking
+    // Create booking as CONFIRMED immediately (no pending status)
     const newBooking = await Booking.create({
       property_id,
       user_id: userId,
@@ -93,7 +93,7 @@ const createBooking = async (
       start_date,
       end_date,
       total_price: totalPrice,
-      status: "pending",
+      status: "confirmed", // Immediately confirmed
     });
 
     // Get booking with property details for response
@@ -109,13 +109,14 @@ const createBooking = async (
 
     res.status(201).json({
       success: true,
-      message: "Booking created successfully",
+      message: "Booking confirmed successfully",
       data: {
         booking: bookingWithProperty,
         booking_details: {
           nights,
           price_per_night: property.price_per_night,
           total_price: totalPrice,
+          status: "confirmed", // Always confirmed
         },
       },
     });
@@ -127,6 +128,78 @@ const createBooking = async (
       return sendError(res, 400, messages.join(", "));
     }
 
+    return sendError(res, 500, "Internal server error");
+  }
+};
+
+// POST /bookings/:id/cancel - Cancel a booking
+const cancelBooking = async (
+  req: CustomRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    const isAdmin = req.user?.isAdmin;
+
+    const booking = await Booking.findByPk(id, {
+      include: [
+        {
+          model: Property,
+          as: "property",
+          attributes: ["id", "title"],
+        },
+      ],
+    });
+
+    if (!booking) {
+      return sendError(res, 404, "Booking not found");
+    }
+
+    // Check if user can cancel this booking
+    if (!isAdmin && booking.user_id !== userId) {
+      return sendError(res, 403, "Access denied");
+    }
+
+    // Check if booking is already cancelled
+    if (booking.status === "cancelled") {
+      return sendError(res, 400, "Booking is already cancelled");
+    }
+
+    // Check if booking can be cancelled (e.g., not in the past)
+    const today = new Date();
+    const bookingStart = new Date(booking.start_date);
+
+    if (bookingStart < today && !isAdmin) {
+      return sendError(res, 400, "Cannot cancel past bookings");
+    }
+
+    // Cancel the booking (set status to cancelled)
+    await booking.update({
+      status: "cancelled",
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Booking cancelled successfully",
+      data: {
+        booking: {
+          id: booking.id,
+          property_id: booking.property_id,
+          user_id: booking.user_id,
+          user_name: booking.user_name,
+          start_date: booking.start_date,
+          end_date: booking.end_date,
+          total_price: booking.total_price,
+          status: booking.status,
+          created_at: booking.created_at,
+          updatedAt: booking.updatedAt,
+          property: (booking as any).property, // Type assertion to bypass TS error
+        },
+      },
+    });
+  } catch (error: any) {
+    console.error("Cancel booking error:", error);
     return sendError(res, 500, "Internal server error");
   }
 };
@@ -180,6 +253,13 @@ const getAllBookings = async (
           totalItems: count,
           itemsPerPage: limitNum,
         },
+        summary: {
+          total_bookings: count,
+          confirmed_bookings: bookings.filter((b) => b.status === "confirmed")
+            .length,
+          cancelled_bookings: bookings.filter((b) => b.status === "cancelled")
+            .length,
+        },
       },
     });
   } catch (error: any) {
@@ -212,10 +292,37 @@ const getMyBookings = async (
       order: [["created_at", "DESC"]],
     });
 
+    // Transform bookings to replace status with boolean flags
+    const transformedBookings = bookings.map((booking) => {
+      const bookingData = booking.toJSON();
+      const { status, ...bookingWithoutStatus } = bookingData; // Remove status field
+
+      return {
+        ...bookingWithoutStatus,
+        is_cancelled: status === "cancelled",
+        is_confirmed: status === "confirmed",
+      };
+    });
+
+    // Calculate summary
+    const confirmedCount = bookings.filter(
+      (b) => b.status === "confirmed"
+    ).length;
+    const cancelledCount = bookings.filter(
+      (b) => b.status === "cancelled"
+    ).length;
+
     res.status(200).json({
       success: true,
       message: "User bookings retrieved successfully",
-      data: { bookings },
+      data: {
+        bookings: transformedBookings,
+        summary: {
+          total_bookings: bookings.length,
+          confirmed_bookings: confirmedCount,
+          cancelled_bookings: cancelledCount,
+        },
+      },
     });
   } catch (error: any) {
     console.error("Get my bookings error:", error);
@@ -290,9 +397,9 @@ const updateBooking = async (
       return sendError(res, 403, "Access denied");
     }
 
-    // Don't allow updates to confirmed bookings unless admin
-    if (booking.status === "confirmed" && !isAdmin) {
-      return sendError(res, 400, "Cannot modify confirmed bookings");
+    // Don't allow updates to cancelled bookings unless admin
+    if (booking.status === "cancelled" && !isAdmin) {
+      return sendError(res, 400, "Cannot modify cancelled bookings");
     }
 
     // If updating dates, validate them
@@ -315,12 +422,12 @@ const updateBooking = async (
         }
       }
 
-      // Check for overlapping bookings (excluding current booking)
+      // Check for overlapping CONFIRMED bookings (excluding current booking)
       const overlappingBookings = await Booking.findAll({
         where: {
           property_id: booking.property_id,
           id: { [Op.ne]: id },
-          status: { [Op.in]: ["confirmed", "pending"] },
+          status: "confirmed", // Only confirmed bookings matter
           [Op.or]: [
             {
               start_date: { [Op.between]: [newStartDate, newEndDate] },
@@ -342,7 +449,7 @@ const updateBooking = async (
         return sendError(
           res,
           400,
-          "Updated dates overlap with existing bookings"
+          "Updated dates overlap with existing confirmed bookings"
         );
       }
 
@@ -386,7 +493,7 @@ const updateBooking = async (
   }
 };
 
-// DELETE /bookings/:id - Cancel/Delete booking
+// DELETE /bookings/:id - Delete booking (Alternative to cancel)
 const deleteBooking = async (
   req: CustomRequest,
   res: Response
@@ -407,19 +514,19 @@ const deleteBooking = async (
       return sendError(res, 403, "Access denied");
     }
 
-    // Check if booking can be cancelled (e.g., not in the past)
+    // Check if booking can be deleted (e.g., not in the past)
     const today = new Date();
     const bookingStart = new Date(booking.start_date);
 
     if (bookingStart < today && !isAdmin) {
-      return sendError(res, 400, "Cannot cancel past bookings");
+      return sendError(res, 400, "Cannot delete past bookings");
     }
 
     await booking.destroy();
 
     res.status(200).json({
       success: true,
-      message: "Booking cancelled successfully",
+      message: "Booking deleted successfully",
     });
   } catch (error: any) {
     console.error("Delete booking error:", error);
@@ -429,6 +536,7 @@ const deleteBooking = async (
 
 export default {
   createBooking,
+  cancelBooking, // New function
   getAllBookings,
   getMyBookings,
   getBookingById,

@@ -171,8 +171,8 @@ export const validateUpdateBooking = [
     .withMessage("End date must be a valid date"),
   check("status")
     .optional()
-    .isIn(["pending", "confirmed", "cancelled"])
-    .withMessage("Status must be 'pending', 'confirmed', or 'cancelled'"),
+    .isIn(["confirmed", "cancelled"])
+    .withMessage("Status must be 'confirmed' or 'cancelled'"),
 ];
 
 // Query Parameter Validators

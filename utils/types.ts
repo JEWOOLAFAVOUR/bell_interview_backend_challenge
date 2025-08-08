@@ -53,7 +53,7 @@ export interface IBooking {
   start_date: Date;
   end_date: Date;
   total_price?: number;
-  status?: "pending" | "confirmed" | "cancelled";
+  status: "confirmed" | "cancelled"; // Removed 'pending' - bookings are immediately confirmed
   created_at: Date;
   updatedAt?: Date;
 }
@@ -64,6 +64,16 @@ export interface PropertyWithAvailability extends IProperty {
     start_date: string;
     end_date: string;
   }>;
+}
+
+export interface AvailableProperty extends IProperty {
+  is_fully_available: boolean;
+  available_periods: Array<{
+    start_date: string;
+    end_date: string;
+    days_available: number;
+  }>;
+  total_available_days: number;
 }
 
 export interface BookingRequest {
