@@ -24,7 +24,7 @@ const sequelize = new Sequelize({
 const connectDB = async () => {
   try {
     await sequelize.authenticate();
-    console.log("✅ PostgreSQL connection established successfully");
+    console.log("PostgreSQL connection established successfully");
 
     // Import models to register them
     await import("../models/index");
@@ -32,10 +32,10 @@ const connectDB = async () => {
     // Sync models in development
     if (process.env.NODE_ENV === "development") {
       await sequelize.sync({ alter: true });
-      console.log("📊 Database models synchronized");
+      console.log("Database models synchronized");
     }
   } catch (error) {
-    console.error("❌ Unable to connect to PostgreSQL:", error);
+    console.error("Unable to connect to PostgreSQL:", error);
     process.exit(1);
   }
 };

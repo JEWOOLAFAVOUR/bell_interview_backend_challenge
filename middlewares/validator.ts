@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { check, validationResult, body } from "express-validator";
 
-// Auth Validators
+// Auth Validators - for login
 export const validateLogin = [
   check("email").normalizeEmail().isEmail().withMessage("Email is invalid"),
   check("password")
@@ -13,6 +13,7 @@ export const validateLogin = [
     .withMessage("Password must be between 6 to 20 characters long!"),
 ];
 
+// Auth Validators - for register
 export const validateUser = [
   check("firstname")
     .trim()
@@ -46,7 +47,7 @@ export const validateUser = [
     .withMessage("Role must be either 'user' or 'admin'"),
 ];
 
-// Property Validators
+// Property Validators - for creating properties
 export const validateProperty = [
   check("title")
     .trim()
@@ -90,6 +91,7 @@ export const validateProperty = [
     }),
 ];
 
+// for updating properties
 export const validateUpdateProperty = [
   check("title")
     .optional()
@@ -115,7 +117,7 @@ export const validateUpdateProperty = [
     .withMessage("Available to date must be a valid date"),
 ];
 
-// Booking Validators
+// Booking Validators - for creating bookings
 export const validateBooking = [
   check("property_id")
     .isInt({ min: 1 })
@@ -151,6 +153,7 @@ export const validateBooking = [
     }),
 ];
 
+// Booking Validators - for updating bookings
 export const validateUpdateBooking = [
   check("start_date")
     .optional()
@@ -213,6 +216,7 @@ export const validatePropertyQuery = [
     }),
 ];
 
+// Availability Query Validators
 export const validateAvailabilityQuery = [
   check("start_date")
     .optional()
@@ -241,7 +245,7 @@ export const validateParamId = [
     .withMessage("ID must be a valid positive integer"),
 ];
 
-// General validation middleware - FIXED THE RETURN TYPE ISSUE
+// General validation middleware
 export const validate = (
   req: Request,
   res: Response,
@@ -261,7 +265,7 @@ export const validate = (
         value: err.value,
       })),
     });
-    return; // Add explicit return
+    return;
   }
 
   // Return first error in production
@@ -269,7 +273,7 @@ export const validate = (
     success: false,
     error: errors[0].msg,
   });
-  return; // Add explicit return
+  return;
 };
 
 // Sanitization middleware for common fields

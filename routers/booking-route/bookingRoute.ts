@@ -26,7 +26,8 @@ router.post(
   validateParamId,
   validate,
   bookingController.cancelBooking
-); // New route
+);
+// new routes still for users
 router.get("/my", verifyToken, bookingController.getMyBookings);
 router.get(
   "/:id",

@@ -9,15 +9,6 @@ const createUser = async (req: Request, res: Response): Promise<void> => {
     const { firstname, lastname, email, password, avatar } = req.body;
     // let role: string = "user";
 
-    // Validate required fields
-    if (!firstname || !lastname || !email || !password) {
-      return sendError(
-        res,
-        400,
-        "Firstname, lastname, email, and password are required"
-      );
-    }
-
     const secret_key = process.env.PASS_SEC;
 
     if (!secret_key) {
@@ -81,11 +72,6 @@ const createUser = async (req: Request, res: Response): Promise<void> => {
 const loginUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
-
-    // Validate required fields
-    if (!email || !password) {
-      return sendError(res, 400, "Email and password are required");
-    }
 
     const secret_key = process.env.PASS_SEC;
 

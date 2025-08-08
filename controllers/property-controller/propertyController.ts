@@ -5,7 +5,6 @@ import { sendError } from "../../utils/helper";
 import { CustomRequest, AvailableProperty } from "../../utils/types";
 import { Op } from "sequelize";
 
-// GET /properties/available - List only available properties (properties with free periods)
 const getAvailableProperties = async (
   req: Request,
   res: Response
@@ -54,7 +53,7 @@ const getAvailableProperties = async (
       const bookings = await Booking.findAll({
         where: {
           property_id: property.id,
-          status: "confirmed", // Only confirmed bookings block availability
+          status: "confirmed",
         },
         order: [["start_date", "ASC"]],
       });
@@ -268,7 +267,7 @@ const getPropertyAvailability = async (
     // Get all confirmed bookings for this property (excluding cancelled)
     const whereClause: any = {
       property_id: id,
-      status: "confirmed", // Only confirmed bookings matter
+      status: "confirmed",
     };
 
     // If date range specified, filter bookings in that range
@@ -480,7 +479,7 @@ const deleteProperty = async (
 
 export default {
   getAllProperties,
-  getAvailableProperties, // New function
+  getAvailableProperties,
   getPropertyById,
   getPropertyAvailability,
   createProperty,

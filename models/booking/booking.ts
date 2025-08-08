@@ -21,7 +21,7 @@ class Booking
   public start_date!: Date;
   public end_date!: Date;
   public total_price?: number;
-  public status!: "confirmed" | "cancelled"; // Removed 'pending'
+  public status!: "confirmed" | "cancelled";
   public created_at!: Date;
   public readonly updatedAt!: Date;
 }
@@ -99,9 +99,9 @@ Booking.init(
       },
     },
     status: {
-      type: DataTypes.ENUM("confirmed", "cancelled"), // Removed 'pending'
+      type: DataTypes.ENUM("confirmed", "cancelled"),
       allowNull: false,
-      defaultValue: "confirmed", // Default to confirmed
+      defaultValue: "confirmed",
     },
     created_at: {
       type: DataTypes.DATE,

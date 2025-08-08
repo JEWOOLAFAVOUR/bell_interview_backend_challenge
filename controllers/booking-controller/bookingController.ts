@@ -52,7 +52,7 @@ const createBooking = async (
     const overlappingBookings = await Booking.findAll({
       where: {
         property_id,
-        status: "confirmed", // Only confirmed bookings block availability
+        status: "confirmed",
         [Op.or]: [
           {
             start_date: { [Op.between]: [start_date, end_date] },
@@ -93,7 +93,7 @@ const createBooking = async (
       start_date,
       end_date,
       total_price: totalPrice,
-      status: "confirmed", // Immediately confirmed
+      status: "confirmed",
     });
 
     // Get booking with property details for response
@@ -116,7 +116,7 @@ const createBooking = async (
           nights,
           price_per_night: property.price_per_night,
           total_price: totalPrice,
-          status: "confirmed", // Always confirmed
+          status: "confirmed",
         },
       },
     });
@@ -295,7 +295,7 @@ const getMyBookings = async (
     // Transform bookings to replace status with boolean flags
     const transformedBookings = bookings.map((booking) => {
       const bookingData = booking.toJSON();
-      const { status, ...bookingWithoutStatus } = bookingData; // Remove status field
+      const { status, ...bookingWithoutStatus } = bookingData;
 
       return {
         ...bookingWithoutStatus,
@@ -427,7 +427,7 @@ const updateBooking = async (
         where: {
           property_id: booking.property_id,
           id: { [Op.ne]: id },
-          status: "confirmed", // Only confirmed bookings matter
+          status: "confirmed",
           [Op.or]: [
             {
               start_date: { [Op.between]: [newStartDate, newEndDate] },
@@ -536,7 +536,7 @@ const deleteBooking = async (
 
 export default {
   createBooking,
-  cancelBooking, // New function
+  cancelBooking,
   getAllBookings,
   getMyBookings,
   getBookingById,

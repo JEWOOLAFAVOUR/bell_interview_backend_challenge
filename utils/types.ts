@@ -53,7 +53,7 @@ export interface IBooking {
   start_date: Date;
   end_date: Date;
   total_price?: number;
-  status: "confirmed" | "cancelled"; // Removed 'pending' - bookings are immediately confirmed
+  status: "confirmed" | "cancelled";
   created_at: Date;
   updatedAt?: Date;
 }
