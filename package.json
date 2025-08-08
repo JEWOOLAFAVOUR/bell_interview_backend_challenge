@@ -1,11 +1,11 @@
 {
   "name": "bell_take_home_challenge",
   "version": "1.0.0",
-  "description": "",
+  "description": "A comprehensive Property Booking API built with Node.js, Express, PostgreSQL, and TypeScript for the Bell Take Home Challenge",
   "main": "app.ts",
   "scripts": {
     "start": "node dist/app.js",
-    "dev": "nodemon src/app.ts",
+    "dev": "nodemon app.ts",
     "build": "tsc",
     "test": "jest",
     "test:watch": "jest --watch",
